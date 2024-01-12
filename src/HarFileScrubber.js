@@ -267,7 +267,7 @@ function App() {
             }
         },
         accept: {
-            'application/*': ['.har'],
+            'application/json': ['.har'],
           },
         multiple: true
     });
