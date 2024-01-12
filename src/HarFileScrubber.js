@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Toggle from '@atlaskit/toggle';
 import Page from '@atlaskit/page';
 import { Grid } from '@atlaskit/primitives';
@@ -43,20 +43,9 @@ function CustomLabel({ htmlFor, children, style }) {
     );
 }
 
-const MAX_VALUE_LENGTH = 1024; // 1 KB per value
-const MAX_TOTAL_LENGTH = 16384; // 16 KB total per setting
+
 
 const validateInput = (inputValue, existingValues, type) => {
-    if (inputValue.length > MAX_VALUE_LENGTH) {
-        console.log("Value exceeds maximum length of 1 KB");
-        return false;
-    }
-
-    const totalLength = existingValues.reduce((acc, value) => acc + value.length, inputValue.length);
-    if (totalLength > MAX_TOTAL_LENGTH) {
-        console.log("Total size of values exceeds limit of 16 KB");
-        return false;
-    }
 
     switch (type) {
         case 'header':
@@ -243,6 +232,39 @@ function ToggleWithLabel({
 
 function App() {
 
+    const inputRef = useRef(null);
+
+
+    const exportSettings = () => {
+        const fileName = "scrubbing-settings.json";
+        const json = JSON.stringify(settings, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const href = URL.createObjectURL(blob);
+    
+        // Create a link and trigger download
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const text = await file.text();
+            try {
+                const importedSettings = JSON.parse(text);
+                // Validate and set the imported settings
+                setSettings(importedSettings);
+            } catch (error) {
+                console.error("Error importing settings:", error);
+                // Handle error (e.g., show an alert to the user)
+            }
+        }
+    };
+
     const [settings, setSettings] = useState(defaultSettings); // Initialize with defaults from the library
     const [scrubbedFiles, setScrubbedFiles] = useState([]);
 
@@ -336,24 +358,44 @@ function App() {
 
     return (
         <Page>
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ maxWidth: '800px', margin: '0 auto', marginTop: '40px' }}>
 
                 <Grid templateColumns="1fr" gap="space.200">
+                <Heading level="h600">Securely HAR Cleaner by <a href="https://abrega.com/">Abrega</a></Heading>
                     <Grid templateColumns="repeat(2, 1fr)" gap="space.200">
-                        <div>
-                            <Heading level="h600">HAR File Scrubbing Configuration</Heading>
+                        <div>             
                             <p style={{ marginBottom: token('space.500', '40px') }}>
-                                By default, Securely will scrub portions of a HAR file. You can read about this in <a href="https://abrega.gitbook.io/securely/secure-har-file-management-with-securely/what-is-sanitized">our documentation</a>.
-                                If you would like to scrub all of a given data element, then please enable that below:
+                                If you need this functionality within your Jira instance, check out <a href="https://marketplace.atlassian.com/apps/1232593/securely-for-jira-har-cleaner-compliance-automation-free?hosting=cloud&tab=overview">Securely for Jira</a>.
+                                <br/><br/>
+
+                                By default, the Securely HAR Cleaner will scrub portions of a HAR file based on the configuration below. You can read about this in <a href="https://abrega.gitbook.io/securely/secure-har-file-management-with-securely/what-is-sanitized">our documentation</a>.
                             </p>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}> {/* Added gap for spacing between buttons */}
                             <div style={{ alignSelf: 'stretch', textAlign: 'right' }}>
                                 <Button onClick={handleResetToDefaults} iconAfter={<TrashIcon label="" size="small" />}>
                                     Reset All Settings to Default
                                 </Button>
                             </div>
+                            <div style={{ alignSelf: 'stretch', textAlign: 'right' }}>
+                                <Button onClick={exportSettings}>
+                                    Export Settings
+                                </Button>
+                            </div>
+                            <div style={{ alignSelf: 'stretch', textAlign: 'right' }}>
+                                <input
+                                    type="file"
+                                    style={{ display: 'none' }}
+                                    ref={inputRef} // Create this ref using useRef
+                                    onChange={handleFileUpload}
+                                    accept=".json"
+                                />
+                                <Button onClick={() => inputRef.current.click()}>
+                                    Import Settings
+                                </Button>
+                            </div>
                         </div>
+
                     </Grid>
                     <div {...getRootProps()} style={{ border: '2px dashed #ccc', padding: '10px', textAlign: 'center' }}>
                         <input {...getInputProps()} />
