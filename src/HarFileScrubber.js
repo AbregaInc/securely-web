@@ -246,24 +246,26 @@ function App() {
     const [settings, setSettings] = useState(defaultSettings); // Initialize with defaults from the library
     const [scrubbedFiles, setScrubbedFiles] = useState([]);
 
-    const onDrop = async (acceptedFiles) => {
-        setTimeout(async () => {
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop: async (acceptedFiles) => {
+            console.log("Files dropped:", acceptedFiles); // Debugging: Check the dropped files
             try {
                 const scrubbedFiles = await Promise.all(acceptedFiles.map(async (file) => {
+                    console.log("Processing file:", file.name); // Debugging: Check each file being processed
                     const harContent = await file.text();
+                    console.log("File content loaded"); // Debugging: Confirm file content is loaded
                     const harObject = JSON.parse(harContent);
-                    const scrubbedHarContent = sanitizeHar(harObject, settings);
-                    const scrubbedBlob = new Blob([JSON.stringify(scrubbedHarContent, null, 2)], { type: 'application/json' });
-                    return { blob: scrubbedBlob, name: file.name.replace(/\.har$/, '-cleaned.har') };
+                    const scrubbedHar = sanitizeHar(harObject, settings);
+                    console.log("File sanitized"); // Debugging: Confirm sanitization
+                    const blob = new Blob([JSON.stringify(scrubbedHar, null, 2)], { type: 'application/json' });
+                    return { blob, name: `cleaned-${file.name}` };
                 }));
+                setScrubbedFiles(scrubbedFiles);
+                console.log("Files processed:", scrubbedFiles); // Debugging: Check the processed files
             } catch (error) {
-                console.error('Error scrubbing HAR files:', error);
-            } 
-        }, 1000);
-    };
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
-        onDrop, 
+                console.error("Error processing files:", error); // Debugging: Catch any errors
+            }
+        },
         accept: {
             'application/*': ['.har'],
           },
